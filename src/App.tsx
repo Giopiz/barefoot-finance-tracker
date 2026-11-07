@@ -14,11 +14,26 @@ export function App() {
   const user = useBarefootStore((state) => state.user);
   const isCloudSyncing = useBarefootStore((state) => state.isCloudSyncing);
   const setAuthModalOpen = useBarefootStore((state) => state.setAuthModalOpen);
+  const setProUser = useBarefootStore((state) => state.setProUser);
+  const pushLocalToCloud = useBarefootStore((state) => state.pushLocalToCloud);
 
-  // Initialize Supabase Auth session & real-time synchronization on startup
+  const [checkoutNotification, setCheckoutNotification] = useState<string | null>(null);
+
+  // Initialize Supabase Auth session & handle Stripe checkout redirect
   useEffect(() => {
     initAuth();
-  }, [initAuth]);
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('checkout') === 'success' || params.get('session_id')) {
+        setProUser(true);
+        pushLocalToCloud();
+        setCheckoutNotification('🎉 Welcome to Barefoot Pro! All custom splits and lessons are unlocked.');
+        window.history.replaceState({}, '', window.location.pathname);
+        setTimeout(() => setCheckoutNotification(null), 6000);
+      }
+    }
+  }, [initAuth, setProUser, pushLocalToCloud]);
 
   // Desktop device frame toggle state
   const [deviceFrameMode, setDeviceFrameMode] = useState<'device' | 'fluid'>('device');
@@ -130,6 +145,14 @@ export function App() {
 
             {/* Inner App Frame with Native Scrolling */}
             <div className="flex-1 overflow-y-auto no-scrollbar relative">
+              {checkoutNotification && (
+                <div
+                  role="status"
+                  className="bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 text-center flex items-center justify-center gap-1.5 shadow-lg sticky top-0 z-50 animate-in slide-in-from-top duration-300"
+                >
+                  <span>{checkoutNotification}</span>
+                </div>
+              )}
               {content}
             </div>
 
@@ -140,7 +163,15 @@ export function App() {
           </div>
         ) : (
           /* Fluid Screen Mode (standard responsive layout) */
-          <div className="w-full max-w-md shadow-2xl">
+          <div className="w-full max-w-md shadow-2xl relative">
+            {checkoutNotification && (
+              <div
+                role="status"
+                className="bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 text-center flex items-center justify-center gap-1.5 shadow-lg sticky top-0 z-50 animate-in slide-in-from-top duration-300"
+              >
+                <span>{checkoutNotification}</span>
+              </div>
+            )}
             {content}
           </div>
         )}
