@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Filter,
   Cloud,
+  HardDriveDownload,
 } from 'lucide-react';
 import { useBarefootStore, getFrameworkSplits } from '../store/useBarefootStore';
 import { QuickLogModal } from './QuickLogModal';
@@ -25,6 +26,7 @@ import { PaydayModal } from './PaydayModal';
 import { AcademyTab } from './AcademyTab';
 import { PremiumModal } from './PremiumModal';
 import { EditBaselineModal } from './EditBaselineModal';
+import { DataExportModal } from './DataExportModal';
 import { BrandLogo } from './BrandLogo';
 
 interface MainDashboardProps {
@@ -52,6 +54,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = () => {
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isPaydayOpen, setIsPaydayOpen] = useState(false);
   const [isEditBaselineOpen, setIsEditBaselineOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const [showOtherBuckets, setShowOtherBuckets] = useState(false);
   const [activityFilter, setActivityFilter] = useState<'all' | 'splurge' | 'bill'>('all');
 
@@ -240,6 +243,20 @@ export const MainDashboard: React.FC<MainDashboardProps> = () => {
             title="Adjust Baseline Income & Framework"
           >
             <Sliders className="w-4 h-4" />
+          </button>
+
+          {/* Quick Offline Data Sovereignty & Export Trigger */}
+          <button
+            type="button"
+            onClick={() => setIsExportOpen(true)}
+            className={`p-1.5 rounded-full transition cursor-pointer ${
+              theme === 'dark'
+                ? 'text-[#64748b] hover:text-[#10b981] hover:bg-[#131b2e]'
+                : 'text-slate-400 hover:text-[#10b981] hover:bg-slate-100'
+            }`}
+            title="Data Sovereignty: One-Click CSV Export & Vault Backup"
+          >
+            <HardDriveDownload className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -750,6 +767,10 @@ export const MainDashboard: React.FC<MainDashboardProps> = () => {
       <EditBaselineModal
         isOpen={isEditBaselineOpen}
         onClose={() => setIsEditBaselineOpen(false)}
+      />
+      <DataExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
       />
       <PremiumModal />
     </div>
