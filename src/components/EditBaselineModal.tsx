@@ -40,12 +40,14 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
   const [framework, setFramework] = useState<BudgetFramework>(
     paycheck.framework || 'barefoot'
   );
-  const [customDraft, setCustomDraft] = useState(customSplits || {
-    billsPct: 60,
-    splurgePct: 15,
-    firePct: 15,
-    smilePct: 10,
-  });
+  const [customDraft, setCustomDraft] = useState(
+    customSplits || {
+      billsPct: 60,
+      splurgePct: 15,
+      firePct: 15,
+      smilePct: 10,
+    }
+  );
 
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -61,9 +63,28 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
     }
   }, [isOpen, paycheck, customSplits]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const currentAmount = parseFloat(amountStr) || 0;
+  const rawAmount = parseFloat(amountStr) || 0;
+  const currentAmount = Math.min(10000000, Math.max(0, rawAmount));
+
   const previewSplits = getFrameworkSplits(
     currentAmount,
     framework,
@@ -71,7 +92,12 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
   );
 
   const totalCustomPct =
-    customDraft.billsPct + customDraft.splurgePct + customDraft.firePct + customDraft.smilePct;
+    Math.max(0, customDraft.billsPct) +
+    Math.max(0, customDraft.splurgePct) +
+    Math.max(0, customDraft.firePct) +
+    Math.max(0, customDraft.smilePct);
+
+  const isCustomValid = framework !== 'custom' || totalCustomPct === 100;
 
   const fmt = (val: number) => {
     return new Intl.NumberFormat('en-AU', {
@@ -82,7 +108,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
   };
 
   const handleSave = () => {
-    if (currentAmount <= 0) return;
+    if (currentAmount <= 0 || !isCustomValid) return;
     if (framework === 'custom') {
       setCustomSplits(customDraft);
     }
@@ -101,7 +127,12 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 animate-in fade-in duration-200 select-none">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 animate-in fade-in duration-200 select-none"
+    >
       <div
         className={`w-full max-w-md rounded-t-[32px] sm:rounded-[32px] shadow-2xl border flex flex-col overflow-hidden max-h-[92vh] ${
           theme === 'dark'
@@ -135,16 +166,24 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
 
         <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
           <div className="space-y-2">
-            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#9ca3af] block">
+            <label
+              htmlFor="edit-paycheck-amount"
+              className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#9ca3af] block"
+            >
               Paycheck Income Amount
             </label>
             <div className="relative">
               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#ff5a36]" />
               <input
+                id="edit-paycheck-amount"
+                name="paycheckAmount"
                 type="number"
+                min="1"
+                max="10000000"
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
                 placeholder="4000"
+                aria-label="Paycheck Income Amount"
                 className={`w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xl font-mono-nums font-bold focus:outline-hidden focus:border-[#ff5a36] transition ${
                   theme === 'dark'
                     ? 'bg-[#0f1115] border-white/10 text-white'
@@ -304,50 +343,96 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <label className="text-[10px] text-[#9ca3af] block mb-1">Bills %</label>
+                  <label htmlFor="custom-bills-pct" className="text-[10px] text-[#9ca3af] block mb-1">
+                    Bills %
+                  </label>
                   <input
+                    id="custom-bills-pct"
+                    name="customBillsPct"
                     type="number"
+                    min="0"
+                    max="100"
+                    aria-label="Bills percentage"
                     value={customDraft.billsPct}
                     onChange={(e) =>
-                      setCustomDraft({ ...customDraft, billsPct: parseInt(e.target.value) || 0 })
+                      setCustomDraft({
+                        ...customDraft,
+                        billsPct: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)),
+                      })
                     }
                     className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 font-mono-nums font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-[#ff5a36] block mb-1">Fun/Splurge %</label>
+                  <label htmlFor="custom-splurge-pct" className="text-[10px] text-[#ff5a36] block mb-1">
+                    Fun/Splurge %
+                  </label>
                   <input
+                    id="custom-splurge-pct"
+                    name="customSplurgePct"
                     type="number"
+                    min="0"
+                    max="100"
+                    aria-label="Fun and Splurge percentage"
                     value={customDraft.splurgePct}
                     onChange={(e) =>
-                      setCustomDraft({ ...customDraft, splurgePct: parseInt(e.target.value) || 0 })
+                      setCustomDraft({
+                        ...customDraft,
+                        splurgePct: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)),
+                      })
                     }
                     className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 font-mono-nums font-bold text-[#ff5a36]"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-[#9ca3af] block mb-1">Fire/Savings %</label>
+                  <label htmlFor="custom-fire-pct" className="text-[10px] text-[#9ca3af] block mb-1">
+                    Fire/Savings %
+                  </label>
                   <input
+                    id="custom-fire-pct"
+                    name="customFirePct"
                     type="number"
+                    min="0"
+                    max="100"
+                    aria-label="Fire and Savings percentage"
                     value={customDraft.firePct}
                     onChange={(e) =>
-                      setCustomDraft({ ...customDraft, firePct: parseInt(e.target.value) || 0 })
+                      setCustomDraft({
+                        ...customDraft,
+                        firePct: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)),
+                      })
                     }
                     className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 font-mono-nums font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-emerald-400 block mb-1">Smile Goals %</label>
+                  <label htmlFor="custom-smile-pct" className="text-[10px] text-emerald-400 block mb-1">
+                    Smile Goals %
+                  </label>
                   <input
+                    id="custom-smile-pct"
+                    name="customSmilePct"
                     type="number"
+                    min="0"
+                    max="100"
+                    aria-label="Smile goals percentage"
                     value={customDraft.smilePct}
                     onChange={(e) =>
-                      setCustomDraft({ ...customDraft, smilePct: parseInt(e.target.value) || 0 })
+                      setCustomDraft({
+                        ...customDraft,
+                        smilePct: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)),
+                      })
                     }
                     className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 font-mono-nums font-bold text-emerald-400"
                   />
                 </div>
               </div>
+
+              {totalCustomPct !== 100 && (
+                <p className="text-[11px] text-amber-400 font-medium">
+                  ⚠️ The percentages must add up to exactly 100% to save.
+                </p>
+              )}
             </div>
           )}
 
@@ -436,7 +521,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
         >
           <button
             type="button"
-            disabled={currentAmount <= 0}
+            disabled={currentAmount <= 0 || !isCustomValid}
             onClick={handleSave}
             className={`w-full py-4 rounded-2xl font-display font-bold text-sm flex items-center justify-center gap-2 transition cursor-pointer ${
               savedSuccess
