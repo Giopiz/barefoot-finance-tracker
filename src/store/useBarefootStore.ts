@@ -104,6 +104,7 @@ export interface BarefootState {
   syncWithCloud: () => Promise<void>;
   pushLocalToCloud: () => Promise<void>;
   signOut: () => Promise<void>;
+  restoreFromBackup: (backup: any) => void;
   resetAll: () => void;
 }
 
@@ -276,6 +277,7 @@ export const useBarefootStore = create<BarefootState>()(
                 isConfigured: true,
               },
               streakCount: Number(profile.current_streak) || 1,
+              isProUser: Boolean(profile.is_pro ?? get().isProUser),
               splurgeBalance: splurgeBucket ? Number(splurgeBucket.balance) : get().splurgeBalance,
               billsBalance: billsBucket ? Number(billsBucket.balance) : get().billsBalance,
               fireBalance: fireBucket ? Number(fireBucket.balance) : get().fireBalance,
@@ -312,6 +314,7 @@ export const useBarefootStore = create<BarefootState>()(
             monthly_income: paycheck.amount,
             budget_framework: paycheck.framework,
             current_streak: streakCount,
+            is_pro: get().isProUser,
           });
 
           // Upsert / Seed Buckets
@@ -591,6 +594,37 @@ export const useBarefootStore = create<BarefootState>()(
 
       setPremiumModalOpen: (open: boolean) => {
         set({ isPremiumModalOpen: open });
+      },
+
+      restoreFromBackup: (backup: any) => {
+        if (!backup || typeof backup !== 'object') return;
+
+        const paycheck = backup.paycheck || get().paycheck;
+        const balances = backup.balances || {};
+        const expenses = Array.isArray(backup.expenses) ? backup.expenses : get().expenses;
+
+        set({
+          paycheck: {
+            amount: Number(paycheck.amount) || get().paycheck.amount,
+            isConfigured: Boolean(paycheck.isConfigured ?? true),
+            frequency: paycheck.frequency || get().paycheck.frequency,
+            framework: paycheck.framework || get().paycheck.framework,
+          },
+          splurgeBalance: balances.splurgeBalance !== undefined ? Number(balances.splurgeBalance) : get().splurgeBalance,
+          billsBalance: balances.billsBalance !== undefined ? Number(balances.billsBalance) : get().billsBalance,
+          fireBalance: balances.fireBalance !== undefined ? Number(balances.fireBalance) : get().fireBalance,
+          smileBalance: balances.smileBalance !== undefined ? Number(balances.smileBalance) : get().smileBalance,
+          customSplits: backup.customSplits || get().customSplits,
+          expenses,
+          paydayCount: Number(backup.paydayCount) || get().paydayCount,
+          streakCount: Number(backup.streakCount) || get().streakCount,
+          readLessonIds: Array.isArray(backup.readLessonIds) ? backup.readLessonIds : get().readLessonIds,
+          isProUser: backup.isProUser !== undefined ? Boolean(backup.isProUser) : get().isProUser,
+        });
+
+        if (get().user) {
+          get().pushLocalToCloud();
+        }
       },
 
       resetAll: () => {
