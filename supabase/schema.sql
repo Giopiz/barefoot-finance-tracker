@@ -8,6 +8,9 @@ create table if not exists public.profiles (
   budget_framework text not null default 'barefoot',
   monthly_income numeric(12, 2) not null default 0.00,
   current_streak integer not null default 0,
+  is_pro boolean not null default false,
+  stripe_customer_id text,
+  stripe_subscription_id text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   
   -- Defensive Constraints
@@ -15,6 +18,11 @@ create table if not exists public.profiles (
   constraint check_streak_non_negative check (current_streak >= 0),
   constraint check_budget_framework_valid check (budget_framework in ('barefoot', '50-30-20', 'custom'))
 );
+
+-- Ensure columns exist if table was already created
+alter table public.profiles add column if not exists is_pro boolean not null default false;
+alter table public.profiles add column if not exists stripe_customer_id text;
+alter table public.profiles add column if not exists stripe_subscription_id text;
 
 -- 2. BUCKETS TABLE
 create table if not exists public.buckets (
@@ -54,6 +62,8 @@ create index if not exists idx_buckets_user_id on public.buckets(user_id);
 create index if not exists idx_transactions_user_id on public.transactions(user_id);
 create index if not exists idx_transactions_bucket_id on public.transactions(bucket_id);
 create index if not exists idx_transactions_created_at on public.transactions(created_at desc);
+create index if not exists idx_profiles_stripe_customer on public.profiles(stripe_customer_id);
+create index if not exists idx_profiles_stripe_subscription on public.profiles(stripe_subscription_id);
 
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
