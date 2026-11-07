@@ -8,12 +8,14 @@ import {
   AlertTriangle,
   Lock,
   Sparkles,
+  HardDriveDownload,
 } from 'lucide-react';
 import {
   useBarefootStore,
   getFrameworkSplits,
   type BudgetFramework,
 } from '../store/useBarefootStore';
+import { DataExportModal } from './DataExportModal';
 
 interface EditBaselineModalProps {
   isOpen: boolean;
@@ -51,6 +53,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
 
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,6 +66,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
     }
   }, [isOpen, paycheck, customSplits]);
 
+  // Scroll lock and keyboard Escape listener
   useEffect(() => {
     if (!isOpen) return;
 
@@ -83,6 +87,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
   if (!isOpen) return null;
 
   const rawAmount = parseFloat(amountStr) || 0;
+  // Guard income amount between $1 and $10,000,000
   const currentAmount = Math.min(10000000, Math.max(0, rawAmount));
 
   const previewSplits = getFrameworkSplits(
@@ -140,6 +145,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
             : 'bg-white border-black/10 text-slate-800'
         }`}
       >
+        {/* Header */}
         <div
           className={`p-4 px-6 flex items-center justify-between border-b ${
             theme === 'dark' ? 'border-white/10' : 'border-slate-100'
@@ -164,7 +170,9 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
           </button>
         </div>
 
+        {/* Scrollable Body */}
         <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+          {/* Income Input */}
           <div className="space-y-2">
             <label
               htmlFor="edit-paycheck-amount"
@@ -193,6 +201,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
             </div>
           </div>
 
+          {/* Frequency Selector */}
           <div className="space-y-2">
             <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#9ca3af] block">
               Pay Frequency
@@ -217,11 +226,13 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
             </div>
           </div>
 
+          {/* Framework Selector */}
           <div className="space-y-2">
             <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#9ca3af] block">
               Budgeting Framework
             </label>
             <div className="space-y-2">
+              {/* Option A: Barefoot */}
               <button
                 type="button"
                 onClick={() => setFramework('barefoot')}
@@ -249,6 +260,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
                 )}
               </button>
 
+              {/* Option B: 50/30/20 */}
               <button
                 type="button"
                 onClick={() => setFramework('50-30-20')}
@@ -276,6 +288,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
                 )}
               </button>
 
+              {/* Option C: Custom PRO */}
               <button
                 type="button"
                 onClick={() => {
@@ -320,6 +333,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
             </div>
           </div>
 
+          {/* Custom Pro Percentage Inputs */}
           {framework === 'custom' && (
             <div
               className={`p-4 rounded-2xl border space-y-3 animate-in fade-in ${
@@ -436,6 +450,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
             </div>
           )}
 
+          {/* Real-time Target Breakdown Preview */}
           {currentAmount > 0 && (
             <div
               className={`p-4 rounded-2xl border ${
@@ -474,6 +489,33 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
             </div>
           )}
 
+          {/* Data Sovereignty & Offline Backup Card */}
+          <div className="pt-2 border-t border-white/5">
+            <div
+              className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                theme === 'dark' ? 'bg-[#0f1115] border-white/5' : 'bg-slate-50 border-black/5'
+              }`}
+            >
+              <div>
+                <span className="text-xs font-bold flex items-center gap-1.5">
+                  <HardDriveDownload className="w-3.5 h-3.5 text-[#10b981]" />
+                  <span>Data Sovereignty & Export</span>
+                </span>
+                <p className={`text-[10px] mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  One-click CSV spreadsheet & JSON vault backup
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExportOpen(true)}
+                className="py-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold transition cursor-pointer text-[#ff5a36] hover:text-[#e04825]"
+              >
+                Export
+              </button>
+            </div>
+          </div>
+
+          {/* Reset All Data Area */}
           <div className="pt-2 border-t border-white/5">
             {showConfirmReset ? (
               <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 space-y-3">
@@ -514,6 +556,7 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
           </div>
         </div>
 
+        {/* Footer Actions */}
         <div
           className={`p-4 px-6 border-t ${
             theme === 'dark' ? 'border-white/10 bg-[#181b20]' : 'border-slate-100 bg-white'
@@ -540,6 +583,9 @@ export const EditBaselineModal: React.FC<EditBaselineModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Offline Data Sovereignty & Export Modal */}
+      <DataExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />
     </div>
   );
 };
